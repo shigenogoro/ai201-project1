@@ -17,7 +17,7 @@ pipeline earns credit; *"80% seemed reasonable"* does not.
 
 ---
 
-## 1. Retrieved chunks contain the answer
+## 1. Retrieved chunks contain the answer - Chunking
 
 For at least 4 of my 5 test questions, the retrieved chunks include one that
 contains the answer.
@@ -28,7 +28,7 @@ contains the answer.
 
 ---
 
-## 2. Every answer names a source
+## 2. Every answer names a source - Generation
 
 Every answer the system produces names at least one source document.
 
@@ -38,7 +38,7 @@ Every answer the system produces names at least one source document.
 
 ---
 
-## 3. The relevance gate stops out-of-corpus questions
+## 3. The relevance gate stops out-of-corpus questions - Gate
 
 When I ask a question my documents clearly don't cover, the relevance gate
 stops it and the system returns "I don't have enough information about that" —
@@ -55,43 +55,42 @@ in at least 4 of 5 tries.
 
 ---
 
-## 4. Something about your chunks
+## 4. Chunk size stays in a usable band - Chunking
 
-<!-- YOU WRITE THIS ONE.
-
-     How would you know if your chunks were the right size? Name something
-     countable or observable.
-
-     Examples of the right shape — don't copy these, they should come from
-     what you actually saw in Milestone 3:
-       - "At least 4 of 5 sampled chunks read as a complete thought, with no
-          sentence cut in half at either end."
-       - "No chunk is shorter than 200 characters, since anything below that
-          in my corpus turned out to be a heading with no content under it." -->
-
-
+Every chunk is between 150 and 1000 characters.
 
 **Why this target:**
 
-
+On the current fixed-width splitter, 6 of my 51 chunks fall under 150
+characters — the shortest is 24 (`"d Sundays and after 5pm."`), the leftover at
+the end of a document after the last full window, carrying no usable fact. I set
+the floor at 150 rather than 200 because some sections here are genuinely short
+and still complete: Thornby Wells' "Where to stay" is 176 characters and answers
+a real question on its own. The ceiling is 1000 because the longest section
+anywhere in my corpus is 711 characters, so anything past 1000 means two
+sections have been run together. Nothing here depends on a question or on
+retrieval, which is what keeps it independent of criterion 1.
 
 ---
 
-## 5. Your choice
+## 5. Retrieval survives rephrasing - Embedding
 
-<!-- YOU WRITE THIS ONE TOO.
-
-     Pick something you actually care about getting right. It could be about
-     speed, about refusals, about a particular kind of question your corpus
-     handles badly, about source attribution being correct rather than merely
-     present — anything, as long as it names a number or an observable
-     outcome. -->
-
-
+When each of my five test questions is rewritten without reusing any content
+word from the sentence that answers it — place names aside — the top result
+still contains the answer, in at least 3 of 5 cases.
 
 **Why this target:**
 
-
+Two of my five questions currently share most of their wording with the
+sentence that answers them: question 2 shares five of its six content words
+("add", "Brightwater", "estimate", "walking", "winter") and question 4 shares
+four of six ("thing", "residents", "recommend", "asked"). A hit on those tells
+me nothing about the embedding, because a plain keyword matcher would find them
+too — only question 5 has zero overlap, where "best time to visit Corry Vale"
+has to reach a sentence reading "May to September." Taking the shared wording
+away removes that crutch from two of the five, so I expect to lose one of them
+and set this one below criterion 1's 4 of 5. If it lands below 3, the embedding
+is doing little that a keyword match was not already doing.
 
 ---
 
