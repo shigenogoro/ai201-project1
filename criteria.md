@@ -17,7 +17,7 @@ pipeline earns credit; *"80% seemed reasonable"* does not.
 
 ---
 
-## 1. Retrieved chunks contain the answer - Chunking
+## 1. Retrieved chunks contain the answer - Retrieval
 
 For at least 4 of my 5 test questions, the retrieved chunks include one that
 contains the answer.
@@ -57,19 +57,29 @@ in at least 4 of 5 tries.
 
 ## 4. Chunk size stays in a usable band - Chunking
 
-Every chunk is between 150 and 1000 characters.
+Every chunk is between 150 and 1000 characters: the shortest and longest that
+`chunker.describe()` reports — printed by `python app.py chunks` and again at
+the end of `python app.py index` — both fall inside the band.
 
 **Why this target:**
 
-On the current fixed-width splitter, 6 of my 51 chunks fall under 150
-characters — the shortest is 24 (`"d Sundays and after 5pm."`), the leftover at
-the end of a document after the last full window, carrying no usable fact. I set
-the floor at 150 rather than 200 because some sections here are genuinely short
-and still complete: Thornby Wells' "Where to stay" is 176 characters and answers
-a real question on its own. The ceiling is 1000 because the longest section
-anywhere in my corpus is 711 characters, so anything past 1000 means two
-sections have been run together. Nothing here depends on a question or on
-retrieval, which is what keeps it independent of criterion 1.
+The floor is the half that can fail right now. On the current fixed-width
+splitter, 6 of my 51 chunks fall under 150 characters, and the shortest is 24
+(`"d Sundays and after 5pm."`) — the leftover at the end of a document after the
+last full window, carrying no usable fact. So this criterion fails today, which
+is the point of setting it: it commits me to fixing the splitter rather than
+describing it. I set the floor at 150 rather than 200 because some sections here
+are genuinely short and still complete — Thornby Wells' "Where to stay" is 176
+characters counting its heading, and answers a real question on its own.
+
+The ceiling cannot fail while `CHUNK_SIZE = 800` caps every chunk at 800
+characters; it is there for the section-based splitter I write in Milestone 3.
+The longest section anywhere in my corpus is 711 characters (`## Straightforward`
+in `guide_accessibility.md`, heading included), so once chunks follow sections,
+anything past 1000 means two sections have been run together.
+
+Nothing here depends on a question or on retrieval, which is what keeps it
+independent of criterion 1.
 
 ---
 
