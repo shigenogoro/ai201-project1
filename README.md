@@ -1,19 +1,6 @@
 # The Unofficial Guide
 
-<!-- Replace this line with your name and which corpus you picked. -->
-
-> **This file is your submission.** Fill it in as you go — most sections get
-> written during the milestone that produces them, not at the end.
->
-> How the starter works, and every command you'll need, is in `RUNNING.md`.
-> Leave that file alone.
->
-> **Paste everything as text.** No screenshots, no video. A typed table gets
-> full credit; a picture of the same table gets none.
->
-> Delete these instruction blocks as you replace them. The `<!-- -->` comments
-> are notes to you and don't show up when the page renders — you can leave them
-> or remove them.
+**Sheng-Kai Wen** — corpus: `city_guides`
 
 ---
 
@@ -21,11 +8,19 @@
 
 ## What This Does
 
-<!-- Three or four sentences. Which corpus you picked, and the kinds of
-     questions your system answers. Write it for someone who has never seen
-     this repo.
-
-     Milestone 5. -->
+This is a retrieval-augmented question answering system over `city_guides`:
+fourteen travel guides for one region, nine of them covering a single town and
+five cutting across all of them — accessibility, eating, regional transport,
+seasons and walking. It answers questions whose answer is a specific fact
+written somewhere in those guides — what time Brightwater's Tuesday market
+closes, how many minutes to add to a walking estimate in winter, how much
+lodging there is on Halden Bay's harbour — and every answer names the document
+it came from. Questions the guides do not cover are refused rather than guessed
+at: a relevance gate measures how far the closest indexed text sits from the
+question and stops anything beyond 0.66 before it reaches the model, and the
+model is separately instructed to answer only from the excerpts it is handed.
+The pipeline has five stages — loading, chunking, embedding, retrieval,
+generation — and the piece I replaced in this unit is the chunker.
 
 ## Chunking Strategy
 
@@ -370,18 +365,51 @@ with documents that do.
 
 ## How I Used AI
 
-<!-- Two specific moments. For each: what you asked for, what came back, and
-     what you changed about it.
+**1. I asked Claude to turn my chunking decisions into Python, and the number it
+gave me to check the result against was wrong.**
 
-     "I asked Claude to write the chunking function from my notes. It ignored
-     the overlap, so I added that myself" is the level of detail we're after.
-     "I used AI to help me code" is not.
+The decisions were made and measured before I asked: split on `## ` headings,
+one section per chunk, prefix every chunk with the document's `# ` title line,
+ceiling 900, overlap 0, leave `## Straightforward` whole even though it covers
+three towns, and pin `fallback_split` at the starter's 800/120 so my baseline
+would not move. I asked for those to be written as `split_documents`.
 
-     Milestone 5. -->
+What came back worked and added two things I had not asked for. A `_merge_short`
+helper that folds any piece under the floor into its neighbour, and a rule that
+repeats the `## ` heading on each piece when a section has to be split. Neither
+one fires on this corpus — the title prefix already lifts my shortest piece from
+123 to 173 characters, and nothing reaches the ceiling — so they are guards for a
+corpus I do not have. I kept them and tested them by temporarily setting
+`CHUNK_SIZE` to 400 and `CHUNK_MIN` to 250, which made both paths run.
 
-**1.**
+It also told me to verify the result against `shortest 173, longest 763`. I ran
+`python chunker.py` and got **761**. The 763 came from a measurement that had
+left an extra blank line between each heading and its body, adding two
+characters; the 711 I had measured myself and written into `criteria.md` as the
+longest section was correct, and 711 plus 50 for the title prefix is 761. Every
+713 and 763 was corrected back to the numbers I had measured first, in both
+`README.md` and `config.py`. The lesson I took from it is that the check is only
+worth running if the expected value came from somewhere I trust more than the
+thing I am checking.
 
-**2.**
+**2. I asked how to place my relevance cutoff, and did not use the first answer.**
+
+I had ten distances: five in-corpus between 0.2398 and 0.4953, five out-of-scope
+between 0.8026 and 0.9753. The obvious placement is the midpoint of that gap,
+0.649, and that is what I was given first.
+
+What changed my mind was a test that came with it — my five questions rewritten
+so that they share no wording with the sentence that answers them. Question 1,
+"What time does the Tuesday market open and close at the Brightwater town?",
+became "When can I buy fresh produce from stalls in central Brightwater?", with
+no "market", no "square" and no "7am", and moved from 0.2545 to 0.5211. That
+told me the in-corpus group can sit far higher than the five numbers I had
+actually measured, so I put the cutoff at the midpoint of the stressed gap,
+0.5211 to 0.8026, which is 0.66 rather than 0.649.
+
+Those five rewrites were Claude's, not mine. They were good enough to choose a
+cutoff with, but they cannot stand in for criterion 5 next unit: if I score my
+own system against questions it was tuned on, the number means nothing.
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
