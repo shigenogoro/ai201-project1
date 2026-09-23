@@ -27,8 +27,14 @@ CORPUS = os.getenv("AI201_CORPUS", "campus_life")
 # These are deliberately plain, generic numbers. Milestone 3 is where you
 # replace them with numbers that fit the documents you actually read.
 
-CHUNK_SIZE = 800        # characters per chunk
-CHUNK_OVERLAP = 120     # characters shared between neighbouring chunks
+# Baseline
+# CHUNK_SIZE = 800        # characters per chunk
+# CHUNK_OVERLAP = 120     # characters shared between neighbouring chunks
+
+# MY Experiment
+CHUNK_SIZE = 900        # characters per chunk
+CHUNK_MIN = 150         # floor of criterion 4
+CHUNK_OVERLAP = 100     # Only if the chunk is too long.
 
 
 # ─── Retrieval (Milestone 4) ─────────────────────────────────────────────────
