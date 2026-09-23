@@ -46,10 +46,12 @@ TOP_K = 5               # how many chunks to pull back per question
 #
 # LOWER IS BETTER: 0.3 is a close match, 0.9 is unrelated.
 #
-# 0.6 is a reasonable starting point, not a right answer. Milestone 4 has you
-# measure your own two groups of distances and put the cutoff in the gap.
-# Most corpora land somewhere between 0.45 and 0.75.
-THRESHOLD = 0.6
+# Measured, not inherited. My five in-corpus questions land at 0.2398-0.4953
+# and the five OUT_OF_SCOPE ones at 0.8026-0.9753, so the gap is 0.3073 wide.
+# Rephrasing my questions so they share no wording with the sentence that
+# answers them pushes the worst in-corpus distance up to 0.5211, so the gap
+# that has to hold under stress is 0.5211-0.8026. 0.66 is its midpoint.
+THRESHOLD = 0.66
 
 
 # ─── Models ──────────────────────────────────────────────────────────────────

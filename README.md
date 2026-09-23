@@ -239,30 +239,134 @@ naming a town it is not about.
 
 ## Sample Answer
 
-<!-- One complete question and answer, pasted as text, with the source line
-     visible. Milestone 4. -->
-
-**Question:**
+**Question:** What time does the Tuesday market open and close at the Brightwater town?
 
 **Answer:**
 
 ```
+  (best distance 0.255, cutoff 0.66)
+
+The Tuesday market in Brightwater sets up in the square at 7am and is finished by 1pm.
+
+Sources: `guide_eating.md` and `guide_brightwater.md`
+
+Sources retrieved: guide_brightwater.md, guide_eating.md, guide_halden_bay.md, guide_regional_transport.md, guide_seasons.md
+
+1 model calls this session, 691 tokens (648 in, 43 out)
 ```
 
-**My relevance cutoff:**
+Every sentence of that answer traces to a retrieved chunk. The two documents it
+names both carry the fact independently: `guide_eating.md` in its `## Markets`
+section, which lists the markets of three towns side by side, and
+`guide_brightwater.md` in `## Eat and drink`. Nothing in the answer comes from
+outside the five chunks — the model could plausibly have added something like
+"markets in small towns usually open early", and did not.
 
-<!-- The number you set in config.py, and how you got there.
+I read `GROUNDING_INSTRUCTION` in `generate.py` with
+`python app.py ask "..." --show-prompt`, which prints the system instruction and
+the assembled prompt before sending them. Each excerpt reaches the model tagged
+`[from guide_eating.md]`, which is what makes "name the document your answer came
+from" a rule the model can actually follow rather than a request it has to guess
+at.
 
-     You ran five questions your corpus covers and the five in OUT_OF_SCOPE
-     that it clearly doesn't, and wrote down the best distance for each. What
-     did those two groups look like? Where was the gap? Put the actual numbers
-     here — the table below wants all ten rows.
+### Testing the grounding instruction on a near miss
 
-     Milestone 4. -->
+The question above does not really test `GROUNDING_INSTRUCTION`. Its answer sits
+word for word in two retrieved chunks, so the model had no reason to invent
+anything. What the prompt layer exists for is the case the gate cannot see: a
+question that is clearly about my corpus, retrieves closely, and asks for a fact
+that is not in there.
+
+`guide_regional_transport.md` has a `## The railway` section that gives the
+journey time, the number of services a day, the fact that booking ahead is
+cheaper, and that the platform machine takes cards only. It never gives a price.
+So:
+
+```
+$ python app.py ask "How much does a train ticket from Brightwater to the regional hub cost?"
+  (best distance 0.386, cutoff 0.66)
+
+I don't have enough information to answer how much a train ticket costs.
+
+Source: `guide_regional_transport.md` and `guide_brightwater.md`
+
+Sources retrieved: guide_brightwater.md, guide_kestrelford.md, guide_pellew_sands.md, guide_regional_transport.md, guide_thornby_wells.md
+```
+
+**The gate could not have caught this one, and should not have.** 0.386 lands in
+the middle of my five in-corpus questions, which run 0.2398, 0.2545, 0.3729,
+0.4009 and 0.4953. A cutoff low enough to refuse it would have to sit below
+0.386, and that would also refuse questions 2 and 4 — two questions my documents
+answer. The two layers are doing different jobs, and this is the job only the
+second one can do.
+
+The model also named the documents it had looked in while refusing, which the
+instruction does not ask for — it only says to admit when the documents do not
+cover the question.
+
+**So I left `GROUNDING_INSTRUCTION` as it is.** I tested it on the case designed
+to break it and saw no drift past the sources. I would not claim more than that
+from two questions: the honest statement is that it held on the one near miss I
+built for it, not that it cannot be broken.
+
+
+**My relevance cutoff:** 0.66, set in `config.py`.
+
+My two groups do not overlap and are not close. The five questions my documents
+cover land between 0.2398 and 0.4953; the five in `OUT_OF_SCOPE` land between
+0.8026 and 0.9753. That leaves a gap **0.3073 wide**, from 0.4953 to 0.8026.
+
+I did not take the midpoint of that gap, because the in-corpus group is the half
+that can move. Criterion 5 in `criteria.md` says retrieval has to survive a
+question being rephrased, so I re-asked all five with the wording of the
+answering sentence taken out — "What time does the Tuesday market open and
+close at the Brightwater town?" became "When can I buy fresh produce from stalls
+in central Brightwater?", with no "market", no "square" and no "7am". That one
+question moved from 0.2545 to 0.5211, the largest move of the five, and it set
+the real ceiling on the in-corpus group.
+
+So the gap that has to hold under stress is **0.5211 to 0.8026**, and 0.66 is
+its midpoint: 0.139 of margin below the hardest question I could pose, 0.143
+above the nearest thing my documents do not cover.
+
+**What I get wrong at 0.66.** The two sides do not cost the same. Criterion 3
+only asks the gate to refuse 4 of 5 out-of-corpus questions, and the nearest one
+sits at 0.8026 — anything below 0.80 scores 5 of 5, so that side has 0.14 of
+slack before it costs me anything at all. The in-corpus side has no such slack:
+a question harder than the ones I wrote, or a rephrasing more aggressive than
+mine, refuses a question my documents can actually answer, and a refusal also
+costs me criterion 2, because an answer that never gets generated names no
+source. If I am wrong about 0.66, I expect to be wrong by refusing something I
+could have answered, and that is the direction I chose.
+
+Measured with `python app.py retrieve`, top-k 5, after re-indexing with
+`chunker.py::split_documents`:
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| What time does the Tuesday market open and close at the Brightwater town? | Yes | 0.2545 |
+| How many time do we need to add to Brightwater walking estimate in winter? | Yes | 0.4009 |
+| How many inns are there in Halden bay harbour? | Yes | 0.2398 |
+| What is the thing that the residents in Marchwood recommend to see when asked? | Yes | 0.4953 |
+| When is the best time to visit Corry Vale in a year? | Yes | 0.3729 |
+| What is the capital of Mongolia? | No | 0.8026 |
+| How do I change the oil in a diesel engine? | No | 0.8881 |
+| Who won the 1994 World Cup? | No | 0.9753 |
+| What is the recommended dosage of ibuprofen for a headache? | No | 0.8350 |
+| How do I write a for loop in Rust? | No | 0.8365 |
+
+At 0.66 the gate passes all five in-corpus questions and refuses all five
+out-of-corpus ones, so criterion 3 is met at 5 of 5 against a target of 4 of 5.
+
+**Top-k stays at 5.** My chunks average 321 characters where the starter's
+averaged 650, so five of mine put about 1,600 characters in front of the model
+rather than 3,250 — the context budget argued for keeping 5 rather than cutting
+it. Question 1 settled it: the answer appears in two different documents,
+`guide_eating.md` at rank 1 and `guide_brightwater.md` at rank 2, and a top-k of
+3 would still have caught both while a tighter one would not. The cost is
+visible on question 2, where ranks 3 to 5 are `## Getting there` sections from
+three towns that have nothing to do with the question and only share a heading
+with documents that do.
 
 ## How I Used AI
 
